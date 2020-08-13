@@ -23,8 +23,8 @@ local function cassandra_get_default_ws(connector)
   end
 
   if not rows
-  or not rows[1]
-  or not rows[1].id
+     or not rows[1]
+     or not rows[1].id
   then
     return nil
   end
@@ -35,8 +35,8 @@ end
 
 local function cassandra_create_default_ws(connector)
   local cql = render([[
-INSERT INTO workspaces(id, name, created_at)
-     VALUES (uuid(), 'default', $(NOW))
+    INSERT INTO workspaces(id, name, created_at)
+    VALUES (uuid(), 'default', $(NOW))
 ]], {
     NOW = ngx.time() * 1000
   })
