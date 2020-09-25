@@ -5,7 +5,6 @@
 -- @module kong.request
 
 
-local ck = require "resty.cookie"
 local cjson = require "cjson.safe".new()
 local multipart = require "multipart"
 local phase_checker = require "kong.pdk.private.phases"
@@ -520,7 +519,7 @@ local function new(self)
       error("cookie name must be a string", 2)
     end
 
-    return ck:new():get(name)
+    return ngx.var["cookie_" .. name]
   end
 
 
