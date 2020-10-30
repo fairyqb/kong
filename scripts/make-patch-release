@@ -6,26 +6,7 @@ cyan="\033[0;36m"
 bold="\033[1m"
 nocolor="\033[0m"
 
-#-------------------------------------------------------------------------------
-function step() {
-   box="   "
-   color="$nocolor"
-   if [ "$version" != "<x.y.z>" ]
-   then
-      if [ -e "/tmp/.step-$1-$version" ]
-      then
-         color="$green"
-         box="[x]"
-      else
-         color="$bold"
-         box="[ ]"
-      fi
-   fi
-   echo -e "$color $box Step $c) $2"
-   echo "        $0 $version $1 $3"
-   echo -e "$nocolor"
-   c="$[c+1]"
-}
+source $(dirname "$0")/common.sh
 
 #-------------------------------------------------------------------------------
 function usage() {
@@ -46,66 +27,15 @@ function usage() {
    step "submit"           "push and submit a release PR"
    step "docs_pr"          "push and submit a docs.konghq.com PR for the release"
    step "merge"            "merge, tag and sign the release"
-   step "update_docker"    "update and submit a PR to Kong's docker-kong repo"
+   step "update_docker"    "(ran by CI now) update and submit a PR to Kong's docker-kong repo"
    step "merge_docker"     "merge, tag and sign Kong's docker-kong PR"
    step "submit_docker"    "submit a PR to docker-library/official-images"
-   step "homebrew"         "bump version and submit a PR to homebrew-kong"
+   step "homebrew"         "(ran by CI now) bump version and submit a PR to homebrew-kong"
    step "luarocks"         "upload to LuaRocks" "<api-key>"
-   step "vagrant"          "bump version and submit a PR to kong-vagrant"
-   step "pongo"            "bump version and submit a PR to kong-pongo"
+   step "vagrant"          "(ran by CI now) bump version and submit a PR to kong-vagrant"
+   step "pongo"            "(ran by CI now) bump version and submit a PR to kong-pongo"
    exit 0
 }
-
-#-------------------------------------------------------------------------------
-function die() {
-   echo
-   echo -e "$red$bold*** $@$nocolor"
-   echo "See also: $0 --help"
-   echo
-   exit 1
-}
-
-#-------------------------------------------------------------------------------
-function SUCCESS() {
-   echo
-   echo -e "$green$bold****************************************$nocolor$bold"
-   for line in "$@"
-   do
-      echo "$line"
-   done
-   echo -e "$green$bold****************************************$nocolor"
-   echo
-   touch /tmp/.step-$step-$version
-   exit 0
-}
-
-#-------------------------------------------------------------------------------
-function CONFIRM() {
-   echo
-   echo -e "$cyan$bold----------------------------------------$nocolor$bold"
-   for line in "$@"
-   do
-      echo "$line"
-   done
-   echo -e "$cyan$bold----------------------------------------$nocolor"
-   read
-}
-
-#-------------------------------------------------------------------------------
-# Dependency checks
-#-------------------------------------------------------------------------------
-
-hub --version &> /dev/null || die "hub is not in PATH. Get it from https://github.com/github/hub"
-
-if resty -v &> /dev/null
-then
-   LUA=resty
-elif lua -v &> /dev/null
-then
-   LUA=lua
-else
-   die "Lua interpreter is not in PATH. Install any Lua or OpenResty to run this script."
-fi
 
 #-------------------------------------------------------------------------------
 # Default help
@@ -143,6 +73,7 @@ fi
 
 EDITOR="${EDITOR-$VISUAL}"
 
+<<<<<<< HEAD
 #-------------------------------------------------------------------------------
 function prepare_changelog() {
    $LUA -e '
@@ -303,6 +234,8 @@ function ensure_recent_luarocks() {
    fi
 }
 
+=======
+>>>>>>> upstream/next
 case "$step" in
    #---------------------------------------------------------------------------
    create)
@@ -340,20 +273,7 @@ case "$step" in
       ;;
    #---------------------------------------------------------------------------
    commit_changelog)
-      if ! git status CHANGELOG.md | grep -q "modified:"
-      then
-         die "No changes in CHANGELOG.md to commit. Did you write the changelog?"
-      fi
-
-      git diff
-
-      CONFIRM "If everything looks all right, press Enter to commit" \
-              "or Ctrl-C to cancel."
-
-      set -e
-      git add CHANGELOG.md
-      git commit -m "docs(changelog) add $version changes"
-      git log -n 1
+      commit_changelog "$version"
 
       SUCCESS "The changelog is now committed locally." \
               "You are ready to run the next step:" \
@@ -471,17 +391,7 @@ case "$step" in
       ;;
    #---------------------------------------------------------------------------
    update_docker)
-      if [ -d ../docker-kong ]
-      then
-         cd ../docker-kong
-      else
-         cd ..
-         git clone https://github.com/kong/docker-kong
-         cd docker-kong
-      fi
-
-      set -e
-      ./update.sh "$version"
+      update_docker "$version"
 
       SUCCESS "Make sure you get the PR above approved and merged" \
               "before continuing to the step 'merge_docker'."
@@ -570,7 +480,10 @@ case "$step" in
 
       git checkout master
       git pull
-      ./assets/add_version.sh CE $version
+      ./assets/add_version.sh CE "$version"
+      if [[ ! $? -eq 0 ]]; then
+         exit 1
+      fi
       SUCCESS "Make sure you get the PR above approved and merged."
       ;;
    #---------------------------------------------------------------------------

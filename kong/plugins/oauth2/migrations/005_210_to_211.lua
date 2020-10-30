@@ -24,7 +24,11 @@ return {
   cassandra = {
     up = [[]],
     teardown = function(connector)
+<<<<<<< HEAD
       operations.clean_cassandra_fields(connector, plugin_entities)
+=======
+      return operations.clean_cassandra_fields(connector, plugin_entities)
+>>>>>>> upstream/next
     end
   }
 }

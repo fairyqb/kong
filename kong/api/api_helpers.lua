@@ -76,7 +76,7 @@ function _M.normalize_nested_params(obj)
     is_array = false
     if type(v) == "table" then
       -- normalize arrays since Lapis parses ?key[1]=foo as {["1"]="foo"} instead of {"foo"}
-      if utils.is_array(v) then
+      if utils.is_array(v, "lapis") then
         is_array = true
         local arr = {}
         for _, arr_v in pairs(v) do arr[#arr+1] = arr_v end
@@ -256,6 +256,8 @@ local function parse_params(fn)
     self.params = _M.normalize_nested_params(self.params)
 
     local res, err = fn(self, ...)
+
+    kong.worker_events.poll()
 
     if err then
       kong.log.err(err)

@@ -51,7 +51,7 @@ Once you have a Linux development environment (either virtual or bare metal), th
 
 1. Prerequisite packages.  Mostly compilers, tools and libraries needed to compile everything else.
 1. OpenResty system, including Nginx, LuaJIT, PCRE, etc.
-1. Databases. Kong uses Posgres, Cassandra and Redis.  We have a handy setup with docker-compose to keep each on its container.
+1. Databases. Kong uses Postgres, Cassandra and Redis.  We have a handy setup with docker-compose to keep each on its container.
 1. Kong itself.
 
 
@@ -120,8 +120,8 @@ These commands don't have to be performed as root, since all compilation is done
 After this task, we'd like to have the next steps use the built packages and for LuaRocks to install new packages inside this `build` directory.  For that, it's important to set the `$PATH` variable accordingly:
 
 ```
-    export PATH=$HOME/path/to/kong/openresty-build-tools/build/openresty/bin:$HOME/path/to/kong/openresty-build-tools/build/openresty/nginx/sbin:$HOME/path/to/kong/openresty-build-tools/build/luarocks/bin:$PATH
-    export OPENSSL_DIR=$HOME/path/to/kong/openresty-build-tools/build/openssl
+    export PATH=$HOME/path/to/kong-build-tools/openresty-build-tools/build/openresty/bin:$HOME/path/to/kong-build-tools/openresty-build-tools/build/openresty/nginx/sbin:$HOME/path/to/kong-build-tools/openresty-build-tools/build/luarocks/bin:$PATH
+    export OPENSSL_DIR=$HOME/path/to/kong-build-tools/openresty-build-tools/build/openssl
 
     eval `luarocks path`
 ```

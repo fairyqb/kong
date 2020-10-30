@@ -55,6 +55,7 @@ local protocols_with_subsystem = {
   https = "http",
   tcp = "stream",
   tls = "stream",
+  udp = "stream",
   grpc = "http",
   grpcs = "http",
 }
@@ -85,6 +86,7 @@ local constants = {
     CONSUMER_GROUPS = "X-Consumer-Groups",
     AUTHENTICATED_GROUPS = "X-Authenticated-Groups",
     FORWARDED_HOST = "X-Forwarded-Host",
+    FORWARDED_PATH = "X-Forwarded-Path",
     FORWARDED_PREFIX = "X-Forwarded-Prefix",
     ANONYMOUS = "X-Anonymous-Consumer",
     VIA = "Via",
@@ -107,6 +109,7 @@ local constants = {
     "plugins",
     "tags",
     "ca_certificates",
+    "clustering_data_planes",
   },
   ENTITY_CACHE_STORE = setmetatable({
     consumers = "cache",
@@ -149,7 +152,6 @@ local constants = {
     "kong_rate_limiting_counters",
   },
   DATABASE = {
-    -- These constants are not used anywhere in the Kong code. They're here as a useful reference
     POSTGRES = {
       MIN = "9.5",
     },
@@ -160,6 +162,11 @@ local constants = {
   },
   PROTOCOLS = protocols,
   PROTOCOLS_WITH_SUBSYSTEM = protocols_with_subsystem,
+
+  DECLARATIVE_FLIPS = {
+    name = "declarative:flips",
+    ttl = 60,
+  }
 }
 
 

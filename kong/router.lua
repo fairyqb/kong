@@ -1,7 +1,7 @@
 local constants     = require "kong.constants"
+local ipmatcher     = require "resty.ipmatcher"
 local lrucache      = require "resty.lrucache"
 local utils         = require "kong.tools.utils"
-local px            = require "resty.mediador.proxy"
 local bit           = require "bit"
 
 
@@ -497,7 +497,8 @@ local function marshall_route(r)
         local range_f
 
         if source.ip and find(source.ip, "/", nil, true) then
-          range_f = px.compile(source.ip)
+          local matcher = ipmatcher.new({ source.ip })
+          range_f = function(ip) return matcher:match(ip) end
         end
 
         insert(route_t.sources, {
@@ -530,7 +531,8 @@ local function marshall_route(r)
         local range_f
 
         if destination.ip and find(destination.ip, "/", nil, true) then
-          range_f = px.compile(destination.ip)
+          local matcher = ipmatcher.new({ destination.ip })
+          range_f = function(ip) return matcher:match(ip) end
         end
 
         insert(route_t.destinations, {
@@ -1771,7 +1773,15 @@ function _M.new(routes)
       -- error value for non-TLS connections ignored intentionally
       local sni, _ = server_name()
 
-      return find_route(nil, nil, nil, nil,
+      local scheme
+      if var.protocol == "UDP" then
+        scheme = "udp"
+
+      else
+        scheme = sni and "tls" or "tcp"
+      end
+
+      return find_route(nil, nil, nil, scheme,
                         src_ip, src_port,
                         dst_ip, dst_port,
                         sni)

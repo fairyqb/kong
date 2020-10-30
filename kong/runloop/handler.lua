@@ -37,6 +37,9 @@ local clear_header = ngx.req.clear_header
 local unpack       = unpack
 
 
+local NOOP = function() end
+
+
 local ERR   = ngx.ERR
 local CRIT  = ngx.CRIT
 local WARN  = ngx.WARN
@@ -442,6 +445,8 @@ local function register_events()
         rebuild_router(ROUTER_SYNC_OPTS)
 
         balancer.init()
+
+        ngx.shared.kong:incr(constants.DECLARATIVE_FLIPS.name, 1, 0, constants.DECLARATIVE_FLIPS.ttl)
 
         return true
       end)
@@ -1028,7 +1033,8 @@ return {
         }
       end
 
-    end
+    end,
+    after = NOOP,
   },
   preread = {
     before = function(ctx)
@@ -1065,7 +1071,8 @@ return {
   certificate = {
     before = function(_)
       certificate.execute()
-    end
+    end,
+    after = NOOP,
   },
   rewrite = {
     before = function(ctx)
@@ -1076,6 +1083,7 @@ return {
       ctx.http_proxy_authorization = var.http_proxy_authorization
       ctx.http_te                  = var.http_te
     end,
+    after = NOOP,
   },
   access = {
     before = function(ctx)
@@ -1111,6 +1119,7 @@ return {
       local forwarded_proto
       local forwarded_host
       local forwarded_port
+      local forwarded_path
       local forwarded_prefix
 
       -- X-Forwarded-* Headers Parsing
@@ -1127,6 +1136,7 @@ return {
         forwarded_proto  = var.http_x_forwarded_proto  or scheme
         forwarded_host   = var.http_x_forwarded_host   or host
         forwarded_port   = var.http_x_forwarded_port   or port
+        forwarded_path   = var.http_x_forwarded_path
         forwarded_prefix = var.http_x_forwarded_prefix
 
       else
@@ -1135,6 +1145,17 @@ return {
         forwarded_port   = port
       end
 
+<<<<<<< HEAD
+=======
+      if not forwarded_path then
+        forwarded_path = var.request_uri
+        local p = find(forwarded_path, "?", 2, true)
+        if p then
+          forwarded_path = sub(forwarded_path, 1, p - 1)
+        end
+      end
+
+>>>>>>> upstream/next
       if not forwarded_prefix and match_t.prefix ~= "/" then
         forwarded_prefix = match_t.prefix
       end
@@ -1226,18 +1247,29 @@ return {
       var.upstream_x_forwarded_proto  = forwarded_proto
       var.upstream_x_forwarded_host   = forwarded_host
       var.upstream_x_forwarded_port   = forwarded_port
+      var.upstream_x_forwarded_path   = forwarded_path
       var.upstream_x_forwarded_prefix = forwarded_prefix
 
       -- At this point, the router and `balancer_setup_stage1` have been
       -- executed; detect requests that need to be redirected from `proxy_pass`
       -- to `grpc_pass`. After redirection, this function will return early
       if service and var.kong_proxy_mode == "http" then
-        if service.protocol == "grpc" then
+        if service.protocol == "grpc" or service.protocol == "grpcs" then
           return ngx.exec("@grpc")
         end
 
-        if service.protocol == "grpcs" then
-          return ngx.exec("@grpcs")
+        if http_version == 1.1 then
+          if route.request_buffering == false then
+            if route.response_buffering == false then
+              return ngx.exec("@unbuffered")
+            end
+
+            return ngx.exec("@unbuffered_request")
+          end
+
+          if route.response_buffering == false then
+            return ngx.exec("@unbuffered_response")
+          end
         end
       end
     end,
@@ -1270,10 +1302,17 @@ return {
       do
         -- set the upstream host header if not `preserve_host`
         local upstream_host = var.upstream_host
+<<<<<<< HEAD
 
         if not upstream_host or upstream_host == "" then
           upstream_host = balancer_data.hostname
 
+=======
+
+        if not upstream_host or upstream_host == "" then
+          upstream_host = balancer_data.hostname
+
+>>>>>>> upstream/next
           local upstream_scheme = var.upstream_scheme
           if upstream_scheme == "http"  and balancer_data.port ~= 80 or
              upstream_scheme == "https" and balancer_data.port ~= 443
@@ -1325,6 +1364,10 @@ return {
       end
     end
   },
+  response = {
+    before = NOOP,
+    after = NOOP,
+  },
   header_filter = {
     before = function(ctx)
       if not ctx.KONG_PROXIED then
@@ -1374,34 +1417,41 @@ return {
     end,
     after = function(ctx)
       local enabled_headers = kong.configuration.enabled_headers
+      local headers = constants.HEADERS
       if ctx.KONG_PROXIED then
-        if enabled_headers[constants.HEADERS.UPSTREAM_LATENCY] then
-          header[constants.HEADERS.UPSTREAM_LATENCY] = ctx.KONG_WAITING_TIME
+        if enabled_headers[headers.UPSTREAM_LATENCY] then
+          header[headers.UPSTREAM_LATENCY] = ctx.KONG_WAITING_TIME
         end
 
-        if enabled_headers[constants.HEADERS.PROXY_LATENCY] then
-          header[constants.HEADERS.PROXY_LATENCY] = ctx.KONG_PROXY_LATENCY
+        if enabled_headers[headers.PROXY_LATENCY] then
+          header[headers.PROXY_LATENCY] = ctx.KONG_PROXY_LATENCY
         end
 
-        if enabled_headers[constants.HEADERS.VIA] then
-          header[constants.HEADERS.VIA] = server_header
+        if enabled_headers[headers.VIA] then
+          header[headers.VIA] = server_header
         end
 
       else
-        if enabled_headers[constants.HEADERS.RESPONSE_LATENCY] then
-          header[constants.HEADERS.RESPONSE_LATENCY] = ctx.KONG_RESPONSE_LATENCY
+        if enabled_headers[headers.RESPONSE_LATENCY] then
+          header[headers.RESPONSE_LATENCY] = ctx.KONG_RESPONSE_LATENCY
         end
 
-        if enabled_headers[constants.HEADERS.SERVER] then
-          header[constants.HEADERS.SERVER] = server_header
+        -- Some plugins short-circuit the request with Via-header, and in those cases
+        -- we don't want to set the Server-header, if the Via-header matches with
+        -- the Kong server header.
+        if not (enabled_headers[headers.VIA] and header[headers.VIA] == server_header) then
+          if enabled_headers[headers.SERVER] then
+            header[headers.SERVER] = server_header
 
-        else
-          header[constants.HEADERS.SERVER] = nil
+          else
+            header[headers.SERVER] = nil
+          end
         end
       end
     end
   },
   log = {
+    before = NOOP,
     after = function(ctx)
       update_lua_mem()
 

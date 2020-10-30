@@ -299,6 +299,7 @@ for _, strategy in helpers.each_strategy() do
         end)
       end)
 
+<<<<<<< HEAD
       describe("X-Forwarded-Prefix", function()
         it("should be added if path was stripped", function()
           local headers = request_headers({}, "/foo/status/200")
@@ -311,6 +312,39 @@ for _, strategy in helpers.each_strategy() do
             ["X-Forwarded-Prefix"] = "/replaced",
           }, "/foo")
 
+=======
+      describe("X-Forwarded-Path", function()
+        it("should be added if not present in request", function()
+          local headers = request_headers {
+            ["Host"] = "headers-inspect.com",
+          }
+
+          assert.equal("/", headers["x-forwarded-path"])
+        end)
+
+        it("should be replaced if present in request", function()
+          local headers = request_headers {
+            ["Host"]             = "headers-inspect.com",
+            ["X-Forwarded-Path"] = "/replaced",
+          }
+
+          assert.equal("/", headers["x-forwarded-path"])
+        end)
+      end)
+
+      describe("X-Forwarded-Prefix", function()
+        it("should be added if path was stripped", function()
+          local headers = request_headers({}, "/foo/status/200")
+
+          assert.equal("/foo", headers["x-forwarded-prefix"])
+        end)
+
+        it("should be replaced if present in request and path was stripped", function()
+          local headers = request_headers({
+            ["X-Forwarded-Prefix"] = "/replaced",
+          }, "/foo")
+
+>>>>>>> upstream/next
           assert.equal("/foo", headers["x-forwarded-prefix"])
         end)
 
@@ -338,6 +372,7 @@ for _, strategy in helpers.each_strategy() do
           assert.equal("127.0.0.1", headers["x-forwarded-for"])
           assert.equal("http", headers["x-forwarded-proto"])
           assert.equal("preserved.com", headers["x-forwarded-host"])
+          assert.equal("/", headers["x-forwarded-path"])
           assert.equal(helpers.get_proxy_port(false), tonumber(headers["x-forwarded-port"]))
         end)
 
@@ -357,6 +392,10 @@ for _, strategy in helpers.each_strategy() do
           assert.equal("http", headers["x-forwarded-proto"])
           assert.equal("preserved.com", headers["x-forwarded-host"])
           assert.equal(helpers.get_proxy_port(false), tonumber(headers["x-forwarded-port"]))
+<<<<<<< HEAD
+=======
+          assert.equal("/", headers["x-forwarded-path"])
+>>>>>>> upstream/next
         end)
       end)
 
@@ -374,6 +413,10 @@ for _, strategy in helpers.each_strategy() do
           assert.equal("http", headers["x-forwarded-proto"])
           assert.equal("headers-inspect.com", headers["x-forwarded-host"])
           assert.equal(helpers.get_proxy_port(false), tonumber(headers["x-forwarded-port"]))
+<<<<<<< HEAD
+=======
+          assert.equal("/", headers["x-forwarded-path"])
+>>>>>>> upstream/next
         end)
 
         it("if present in request while discarding the downstream host", function()
@@ -394,6 +437,10 @@ for _, strategy in helpers.each_strategy() do
           assert.equal("http", headers["x-forwarded-proto"])
           assert.equal("headers-inspect.com", headers["x-forwarded-host"])
           assert.equal(helpers.get_proxy_port(false), tonumber(headers["x-forwarded-port"]))
+<<<<<<< HEAD
+=======
+          assert.equal("/", headers["x-forwarded-path"])
+>>>>>>> upstream/next
         end)
       end)
 
@@ -506,6 +553,7 @@ for _, strategy in helpers.each_strategy() do
         end)
       end)
 
+<<<<<<< HEAD
       describe("X-Forwarded-Prefix", function()
         it("should be preserved even if path was stripped", function()
           local headers = request_headers({
@@ -523,6 +571,44 @@ for _, strategy in helpers.each_strategy() do
           assert.equal("/preserved", headers["x-forwarded-prefix"])
         end)
       end)
+=======
+      describe("X-Forwarded-Path", function()
+        it("should be added if not present in request", function()
+          local headers = request_headers {
+            ["Host"] = "headers-inspect.com",
+          }
+
+          assert.equal("/", headers["x-forwarded-path"])
+        end)
+
+        it("should be forwarded if present in request", function()
+          local headers = request_headers {
+            ["Host"]             = "headers-inspect.com",
+            ["X-Forwarded-Path"] = "/original-path",
+          }
+
+          assert.equal("/original-path", headers["x-forwarded-path"])
+        end)
+      end)
+
+      describe("X-Forwarded-Prefix", function()
+        it("should be preserved even if path was stripped", function()
+          local headers = request_headers({
+            ["x-forwarded-prefix"] = "/preserved",
+          }, "/foo/status/200")
+
+          assert.equal("/preserved", headers["x-forwarded-prefix"])
+        end)
+
+        it("should be preserved even if path was stripped", function()
+          local headers = request_headers({
+            ["x-forwarded-prefix"] = "/preserved",
+          }, "/status/200")
+
+          assert.equal("/preserved", headers["x-forwarded-prefix"])
+        end)
+      end)
+>>>>>>> upstream/next
     end)
 
     describe("(using the non-trusted configuration values)", function()
@@ -632,6 +718,7 @@ for _, strategy in helpers.each_strategy() do
         end)
       end)
 
+<<<<<<< HEAD
       describe("X-Forwarded-Prefix", function()
         it("should be added if path was stripped", function()
           local headers = request_headers({}, "/foo/status/200")
@@ -656,6 +743,51 @@ for _, strategy in helpers.each_strategy() do
         it("should not be added if / was stripped", function()
           local headers = request_headers({}, "/")
 
+=======
+      describe("X-Forwarded-Path", function()
+        it("should be added if not present in request", function()
+          local headers = request_headers {
+            ["Host"] = "headers-inspect.com",
+          }
+
+          assert.equal("/", headers["x-forwarded-path"])
+        end)
+
+        it("should be replaced if present in request", function()
+          local headers = request_headers {
+            ["Host"]             = "headers-inspect.com",
+            ["X-Forwarded-Path"] = "/untrusted",
+          }
+
+          assert.equal("/", headers["x-forwarded-path"])
+        end)
+      end)
+
+      describe("X-Forwarded-Prefix", function()
+        it("should be added if path was stripped", function()
+          local headers = request_headers({}, "/foo/status/200")
+
+          assert.equal("/foo", headers["x-forwarded-prefix"])
+        end)
+
+        it("should be replaced if present in request and path was stripped", function()
+          local headers = request_headers({
+            ["X-Forwarded-Prefix"] = "/replaced",
+          }, "/foo")
+
+          assert.equal("/foo", headers["x-forwarded-prefix"])
+        end)
+
+        it("should not be added if path was not stripped", function()
+          local headers = request_headers({}, "/status/200")
+
+          assert.is_nil(headers["x-forwarded-prefix"])
+        end)
+
+        it("should not be added if / was stripped", function()
+          local headers = request_headers({}, "/")
+
+>>>>>>> upstream/next
           assert.is_nil(headers["x-forwarded-prefix"])
         end)
       end)

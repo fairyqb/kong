@@ -1,4 +1,5 @@
 local utils = require "kong.tools.utils"
+local pl_path = require "pl.path"
 
 describe("Utils", function()
 
@@ -22,6 +23,40 @@ describe("Utils", function()
         utils.get_system_infos(),
         utils.get_system_infos()
       )
+    end)
+  end)
+
+  describe("get_system_trusted_certs_filepath()", function()
+    local old_exists = pl_path.exists
+    after_each(function()
+      pl_path.exists = old_exists
+    end)
+    local tests = {
+      Debian = "/etc/ssl/certs/ca-certificates.crt",
+      Fedora = "/etc/pki/tls/certs/ca-bundle.crt",
+      OpenSuse = "/etc/ssl/ca-bundle.pem",
+      OpenElec = "/etc/pki/tls/cacert.pem",
+      CentOS = "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem",
+      Alpine = "/etc/ssl/cert.pem",
+    }
+
+    for distro, test_path in pairs(tests) do
+      it("retrieves the default filepath in " .. distro, function()
+        pl_path.exists = function(path)
+          return path == test_path
+        end
+        assert.same(test_path, utils.get_system_trusted_certs_filepath())
+      end)
+    end
+
+    it("errors if file is somewhere else", function()
+      pl_path.exists = function(path)
+        return path == "/some/unknown/location.crt"
+      end
+
+      local ok, err = utils.get_system_trusted_certs_filepath()
+      assert.is_nil(ok)
+      assert.matches("Could not find trusted certs file", err)
     end)
   end)
 
@@ -354,14 +389,57 @@ describe("Utils", function()
     end)
 
     describe("is_array()", function()
-      it("should know when an array ", function()
+      it("should know when an array (strict)", function()
         assert.True(utils.is_array({ "a", "b", "c", "d" }))
-        assert.True(utils.is_array({ ["1"] = "a", ["2"] = "b", ["3"] = "c", ["4"] = "d" }))
+        assert.False(utils.is_array({ "a", "b", nil, "c", "d" }))
+        assert.False(utils.is_array({ [-1] = "a", [0] = "b", [1] = "c", [2] = "d" }))
+        assert.False(utils.is_array({ [0] = "a", [1] = "b", [2] = "c", [3] = "d" }))
+        assert.True(utils.is_array({ [1] = "a", [2] = "b", [3] = "c", [4] = "d" }))
+        assert.True(utils.is_array({ [1.0] = "a", [2.0] = "b", [3.0] = "c", [4.0] = "d" }))
+        assert.False(utils.is_array({ [1] = "a", [2] = "b", nil, [3] = "c", [4] = "d" })) --luacheck: ignore
+        assert.False(utils.is_array({ [1] = "a", [2] = "b", nil, [4] = "c", [5] = "d" })) --luacheck: ignore
+        assert.False(utils.is_array({ [1.1] = "a", [2.1] = "b", [3.1] = "c", [4.1] = "d" }))
+        assert.False(utils.is_array({ ["1"] = "a", ["2"] = "b", ["3"] = "c", ["4"] = "d" }))
         assert.False(utils.is_array({ "a", "b", "c", foo = "d" }))
         assert.False(utils.is_array())
         assert.False(utils.is_array(false))
         assert.False(utils.is_array(true))
       end)
+
+      it("should know when an array (fast)", function()
+        assert.True(utils.is_array({ "a", "b", "c", "d" }, "fast"))
+        assert.True(utils.is_array({ "a", "b", nil, "c", "d" }, "fast"))
+        assert.True(utils.is_array({ [-1] = "a", [0] = "b", [1] = "c", [2] = "d" }, "fast"))
+        assert.True(utils.is_array({ [0] = "a", [1] = "b", [2] = "c", [3] = "d" }, "fast"))
+        assert.True(utils.is_array({ [1] = "a", [2] = "b", [3] = "c", [4] = "d" }, "fast"))
+        assert.True(utils.is_array({ [1.0] = "a", [2.0] = "b", [3.0] = "c", [4.0] = "d" }, "fast"))
+        assert.True(utils.is_array({ [1] = "a", [2] = "b", nil, [3] = "c", [4] = "d" }, "fast")) --luacheck: ignore
+        assert.True(utils.is_array({ [1] = "a", [2] = "b", nil, [4] = "c", [5] = "d" }, "fast")) --luacheck: ignore
+        assert.False(utils.is_array({ [1.1] = "a", [2.1] = "b", [3.1] = "c", [4.1] = "d" }, "fast"))
+        assert.False(utils.is_array({ ["1"] = "a", ["2"] = "b", ["3"] = "c", ["4"] = "d" }, "fast"))
+        assert.False(utils.is_array({ "a", "b", "c", foo = "d" }, "fast"))
+        assert.False(utils.is_array(nil, "fast"))
+        assert.False(utils.is_array(false, "fast"))
+        assert.False(utils.is_array(true, "fast"))
+      end)
+
+      it("should know when an array (lapis)", function()
+        assert.True(utils.is_array({ "a", "b", "c", "d" }, "lapis"))
+        assert.False(utils.is_array({ "a", "b", nil, "c", "d" }, "lapis"))
+        assert.False(utils.is_array({ [-1] = "a", [0] = "b", [1] = "c", [2] = "d" }, "lapis"))
+        assert.False(utils.is_array({ [0] = "a", [1] = "b", [2] = "c", [3] = "d" }, "lapis"))
+        assert.True(utils.is_array({ [1] = "a", [2] = "b", [3] = "c", [4] = "d" }, "lapis"))
+        assert.True(utils.is_array({ [1.0] = "a", [2.0] = "b", [3.0] = "c", [4.0] = "d" }, "lapis"))
+        assert.False(utils.is_array({ [1] = "a", [2] = "b", nil, [3] = "c", [4] = "d" }, "lapis")) --luacheck: ignore
+        assert.False(utils.is_array({ [1] = "a", [2] = "b", nil, [4] = "c", [5] = "d" }, "lapis")) --luacheck: ignore
+        assert.False(utils.is_array({ [1.1] = "a", [2.1] = "b", [3.1] = "c", [4.1] = "d" }, "lapis"))
+        assert.True(utils.is_array({ ["1"] = "a", ["2"] = "b", ["3"] = "c", ["4"] = "d" }, "lapis"))
+        assert.False(utils.is_array({ "a", "b", "c", foo = "d" }, "lapis"))
+        assert.False(utils.is_array(nil, "lapis"))
+        assert.False(utils.is_array(false, "lapis"))
+        assert.False(utils.is_array(true, "lapis"))
+      end)
+
     end)
 
     describe("add_error()", function()
